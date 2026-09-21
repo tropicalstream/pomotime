@@ -32,7 +32,7 @@ With a paired accessory ring: **LEFT / RIGHT** program, **UP** extend/skip/lap,
 **DOWN** pin/unpin the compact corner chip.
 
 **Accidental-switch guard.** While a session is running or paused, a program
-switch first shows *SWITCH TO … ? HOLD / TURN AGAIN* with a 5-second draining
+switch first shows *… ? REPEAT TO CONFIRM* with a 5-second draining
 bar. Repeat the gesture within the window to confirm; otherwise it cancels and
 the session keeps running. Idle or finished, switches are immediate.
 
