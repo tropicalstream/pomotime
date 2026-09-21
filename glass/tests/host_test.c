@@ -39,7 +39,7 @@ static void arc_set_range(gm_plugin_lvgl_obj_t *o, int16_t a, int16_t b) { (void
 static void arc_set_value(gm_plugin_lvgl_obj_t *o, int16_t v) { (void)o; (void)v; }
 static gm_plugin_lvgl_obj_t *line_create(gm_plugin_lvgl_obj_t *p) { return obj_create(p); }
 static void line_set_points(gm_plugin_lvgl_obj_t *o, const gm_plugin_lvgl_point_t *pts, uint16_t n) { (void)o; (void)pts; (void)n; }
-static gm_plugin_lvgl_coord_t font_get_line_height(const gm_plugin_lvgl_font_t *f) { (void)f; return 16; }
+static gm_plugin_lvgl_coord_t font_get_line_height(const gm_plugin_lvgl_font_t *f) { (void)f; return 26; }
 static void text_get_size(gm_plugin_lvgl_point_t *s, const char *t, const gm_plugin_lvgl_font_t *f, gm_plugin_lvgl_coord_t ls, gm_plugin_lvgl_coord_t lsp, gm_plugin_lvgl_coord_t mw, gm_plugin_lvgl_text_flag_t fl) { (void)t; (void)f; (void)ls; (void)lsp; (void)mw; (void)fl; s->x = 0; s->y = 0; }
 static uint32_t text_get_next_line(const char *t, const gm_plugin_lvgl_font_t *f, gm_plugin_lvgl_coord_t ls, gm_plugin_lvgl_coord_t mw, gm_plugin_lvgl_coord_t *uw, gm_plugin_lvgl_text_flag_t fl) { (void)t; (void)f; (void)ls; (void)mw; (void)uw; (void)fl; return 0; }
 static void label_set_selection_start(gm_plugin_lvgl_obj_t *o, uint32_t i) { (void)o; (void)i; }

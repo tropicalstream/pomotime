@@ -12,8 +12,9 @@
  *   PRIMARY single      start / pause      PRIMARY double   reset
  *   PRIMARY long        next program (guarded while a session is in progress:
  *                       long-press again within 5 s to confirm)
- *   NOD                 Pomodoro: extend focus +10 min · HIIT/EMOM: skip
+ *   NOD / HEAD DOWN     Pomodoro: extend focus +10 min · HIIT/EMOM: skip
  *                       interval · AMRAP: +1 lap
+ *   HEAD UP             tuck the timer into the corner chip / bring it back
  *   HEAD LEFT / RIGHT   previous / next program (same guard)
  *   BACK / HOME         exit
  * Accessory ring, when paired: LEFT/RIGHT program, UP extend/skip/lap,
@@ -67,7 +68,7 @@ typedef enum {
 typedef enum { STATE_IDLE, STATE_RUNNING, STATE_PAUSED, STATE_DONE } state_t;
 
 static const char *const program_names[PROGRAM_COUNT] = {
-    "POMODORO", "HIIT / TABATA", "EMOM", "AMRAP"
+    "POMODORO", "HIIT", "EMOM", "AMRAP"
 };
 
 /* ---- seven-segment digits ---------------------------------------------- */
@@ -141,7 +142,8 @@ typedef struct {
     /* render cache so we only touch LVGL when something changed */
     bool compact_shown;
     int16_t panel_x, panel_y, panel_w, panel_h;
-    int16_t bar_w;
+    int16_t bar_w, bar_y, bar_h, cap_y, dig_y, dig_h;
+    uint8_t shown_slots;
     uint8_t shown_accent;
     uint8_t shown_edge;
     bool edge_shown;
@@ -493,22 +495,54 @@ static void layout_digit(digit_t *d, int16_t x, int16_t y, int16_t w, int16_t h)
             ui->obj_set_size(d->seg[6], (int16_t)(w - 2 * t), t);
 }
 
+/* Centre the visible digit slots (3, 4 or 5 of "mmm:ss") in the panel. The
+ * hidden leading slots are parked off-panel so the time never has a gap. */
+static void layout_digits(uint8_t visible)
+{
+    const gm_plugin_lvgl_api_t *ui = app.ui;
+    int16_t dh = app.dig_h, y = app.dig_y;
+    int16_t dw = digit_w(dh);
+    int16_t t = digit_thick(dh);
+    int16_t gap = (int16_t)(t + 2);
+    int16_t total = (int16_t)(visible * dw + (visible - 1) * gap + 2 * t + 2 * gap);
+    int16_t x = (int16_t)((app.panel_w - total) / 2);
+    uint8_t first = (uint8_t)(DIGIT_SLOTS - visible);
+    uint8_t i;
+    for (i = 0; i < DIGIT_SLOTS; ++i) {
+        if (i < first) {
+            layout_digit(&app.digits[i], (int16_t)-200, y, dw, dh);
+            continue;
+        }
+        layout_digit(&app.digits[i], x, y, dw, dh);
+        x = (int16_t)(x + dw + gap);
+        if (i == 2) {
+            ui->obj_set_pos(app.colon[0], x, (int16_t)(y + dh / 3 - t / 2));
+            ui->obj_set_size(app.colon[0], t, t);
+            ui->obj_set_pos(app.colon[1], x, (int16_t)(y + 2 * dh / 3 - t / 2));
+            ui->obj_set_size(app.colon[1], t, t);
+            x = (int16_t)(x + t + gap);
+        }
+    }
+    app.shown_slots = visible;
+}
+
 static void layout_panel(bool compact)
 {
     const gm_plugin_lvgl_api_t *ui = app.ui;
-    int16_t pw, ph, px, py, pad, dh, dw, gap, t, total, x, y;
-    uint8_t i;
+    int16_t pw, ph, px, py, pad, dh, y, lh;
 
+    lh = ui->font_get_line_height(ui->font_default);
+    if (lh < 14) lh = 14;
     if (compact) {
-        pw = (int16_t)(app.sw * 30 / 100);
-        ph = (int16_t)(app.sh * 18 / 100);
+        pw = (int16_t)(app.sw * 32 / 100);
+        ph = (int16_t)(app.sh * 23 / 100);
         px = (int16_t)(app.sw * 3 / 100);
         py = (int16_t)(app.sh * 5 / 100);
     } else {
         pw = (int16_t)(app.sw / 2);
-        ph = (int16_t)(app.sh * 32 / 100);
+        ph = (int16_t)(app.sh * 42 / 100);
         px = (int16_t)((app.sw - pw) / 2);
-        py = (int16_t)(app.sh * 60 / 100);
+        py = (int16_t)(app.sh * 55 / 100);
     }
     app.panel_x = px; app.panel_y = py; app.panel_w = pw; app.panel_h = ph;
     pad = (int16_t)(ph * 12 / 100);
@@ -518,52 +552,50 @@ static void layout_panel(bool compact)
 
     /* Overline sits inside the top padding. Everything is a child of the
      * panel so coordinates below are panel-relative. */
-    ui->obj_set_size(app.overline, (int16_t)(pw - 2 * pad), 18);
-    ui->obj_set_pos(app.overline, pad, (int16_t)(compact ? 3 : pad / 2 + 2));
+    ui->obj_set_size(app.overline, (int16_t)(pw - 2 * pad), lh);
+    ui->obj_set_pos(app.overline, pad, (int16_t)(compact ? 3 : 6));
 
     /* Digits: three minute slots (leading one hidden when unused), colon,
-     * two second slots. Sized from the panel height. */
-    dh = (int16_t)(ph * (compact ? 44 : 40) / 100);
-    dw = digit_w(dh);
-    t = digit_thick(dh);
-    gap = (int16_t)(t + 2);
-    total = (int16_t)(DIGIT_SLOTS * dw + (DIGIT_SLOTS - 1) * gap + 2 * t + 2 * gap);
-    x = (int16_t)((pw - total) / 2);
-    y = (int16_t)(compact ? ph - dh - 6 : ph * 30 / 100);
-    for (i = 0; i < DIGIT_SLOTS; ++i) {
-        layout_digit(&app.digits[i], x, y, dw, dh);
-        x = (int16_t)(x + dw + gap);
-        if (i == 2) {
-            /* colon between minutes and seconds */
-            ui->obj_set_pos(app.colon[0], x, (int16_t)(y + dh / 3 - t / 2));
-            ui->obj_set_size(app.colon[0], t, t);
-            ui->obj_set_pos(app.colon[1], x, (int16_t)(y + 2 * dh / 3 - t / 2));
-            ui->obj_set_size(app.colon[1], t, t);
-            x = (int16_t)(x + t + gap);
-        }
+     * two second slots. Height comes from the room left between the
+     * overline and the caption/bar so nothing can collide whatever the
+     * Host font size is. */
+    {
+        int16_t cap_y = (int16_t)(ph - lh - 4);
+        int16_t bar_h = (int16_t)(ph * 45 / 1000 + 1);
+        int16_t top = (int16_t)(compact ? 3 + lh + 2 : 6 + lh + 4);
+        int16_t room = compact ? (int16_t)(ph - top - 4)
+                               : (int16_t)(cap_y - top - bar_h - 10);
+        dh = (int16_t)(ph * (compact ? 44 : 40) / 100);
+        if (dh > room) dh = room;
+        if (dh < 12) dh = 12;
+        y = top;
+        app.bar_y = (int16_t)(y + dh + 4);
+        app.bar_h = bar_h;
+        app.cap_y = cap_y;
     }
+    app.dig_y = y;
+    app.dig_h = dh;
+    app.shown_slots = 0;            /* force layout_digits on next render */
 
-    /* Progress bar and caption live below the digits (full size only). */
-    app.bar_w = (int16_t)(pw - 2 * pad);
-    ui->obj_set_pos(app.bar_bg, pad, (int16_t)(ph - pad * 22 / 10));
-    ui->obj_set_size(app.bar_bg, app.bar_w, (int16_t)(ph * 45 / 1000 + 1));
-    ui->obj_set_pos(app.bar_fill, pad, (int16_t)(ph - pad * 22 / 10));
-    ui->obj_set_size(app.bar_fill, 1, (int16_t)(ph * 45 / 1000 + 1));
-    ui->obj_set_size(app.caption, (int16_t)(pw - 2 * pad), 18);
-    ui->obj_set_pos(app.caption, pad, (int16_t)(ph - pad / 4 - 16));
+    ui->obj_set_pos(app.bar_bg, pad, app.bar_y);
+    ui->obj_set_size(app.bar_bg, app.bar_w, app.bar_h);
+    ui->obj_set_pos(app.bar_fill, pad, app.bar_y);
+    ui->obj_set_size(app.bar_fill, 1, app.bar_h);
+    ui->obj_set_size(app.caption, (int16_t)(pw - 2 * pad), lh);
+    ui->obj_set_pos(app.caption, pad, app.cap_y);
     set_hidden(app.bar_bg, compact);
     set_hidden(app.bar_fill, compact);
     set_hidden(app.caption, compact);
     app.shown_bar = -1;
 
     /* Switch-confirmation chip floats above the full panel. */
-    ui->obj_set_size(app.prompt, (int16_t)(app.sw * 88 / 100), 44);
+    ui->obj_set_size(app.prompt, (int16_t)(app.sw * 88 / 100), (int16_t)(lh + 18));
     ui->obj_set_pos(app.prompt, (int16_t)(app.sw * 6 / 100),
-                    (int16_t)(app.sh * 60 / 100 - app.sh * 12 / 100 - 22));
-    ui->obj_set_size(app.prompt_label, (int16_t)(app.sw * 84 / 100), 20);
-    ui->obj_set_pos(app.prompt_label, (int16_t)(app.sw * 2 / 100), 6);
+                    (int16_t)(app.sh * 55 / 100 - lh - 40));
+    ui->obj_set_size(app.prompt_label, (int16_t)(app.sw * 84 / 100), lh);
+    ui->obj_set_pos(app.prompt_label, (int16_t)(app.sw * 2 / 100), 5);
     app.prompt_bar_w = (int16_t)(app.sw * 84 / 100);
-    ui->obj_set_pos(app.prompt_bar, (int16_t)(app.sw * 2 / 100), 34);
+    ui->obj_set_pos(app.prompt_bar, (int16_t)(app.sw * 2 / 100), (int16_t)(lh + 10));
     ui->obj_set_size(app.prompt_bar, app.prompt_bar_w, 4);
 }
 
@@ -571,7 +603,7 @@ static void layout_grid(void)
 {
     /* Faint synthwave floor behind the athletic panel: a horizon plus
      * receding horizontals and a fan of perspective lines. */
-    int16_t horizon = (int16_t)(app.sh * 60 / 100 - app.sh * 4 / 100);
+    int16_t horizon = (int16_t)(app.sh * 55 / 100 - app.sh * 4 / 100);
     int16_t y = horizon;
     int16_t d = (int16_t)(app.sh * 3 / 100);
     uint8_t i;
@@ -646,15 +678,18 @@ static gm_plugin_result_t create_ui(void)
     app.help1 = ui->label_create(app.root);
     app.help2 = ui->label_create(app.root);
     if (app.help1 == 0 || app.help2 == 0) return GM_PLUGIN_ENOMEM;
-    ui->obj_set_size(app.help1, (int16_t)(app.sw - 40), 22);
-    ui->obj_set_size(app.help2, (int16_t)(app.sw - 40), 22);
-    ui->obj_set_pos(app.help1, 20, (int16_t)(app.sh * 30 / 100));
-    ui->obj_set_pos(app.help2, 20, (int16_t)(app.sh * 30 / 100 + 26));
+    {
+        int16_t lh = ui->font_get_line_height(ui->font_default);
+        ui->obj_set_size(app.help1, (int16_t)(app.sw - 40), lh);
+        ui->obj_set_size(app.help2, (int16_t)(app.sw - 40), lh);
+        ui->obj_set_pos(app.help1, 20, (int16_t)(app.sh * 28 / 100));
+        ui->obj_set_pos(app.help2, 20, (int16_t)(app.sh * 28 / 100 + lh + 4));
+    }
     style_text(app.help1, 0x90, false);
     style_text(app.help2, 0x90, false);
     ui->label_set_text(app.help1, "CLICK start   DOUBLE-CLICK reset   HOLD next mode");
     ui->label_set_text(app.help2, app.has_imu
-        ? "NOD extend / skip / lap   HEAD LEFT-RIGHT mode   BACK exit"
+        ? "HEAD: DOWN skip/extend   L-R mode   UP tuck"
         : "RING: UP extend / skip / lap   LEFT-RIGHT mode   BACK exit");
 
     /* Panel and its children. */
@@ -674,14 +709,14 @@ static gm_plugin_result_t create_ui(void)
             if (app.digits[i].seg[s] == 0) return GM_PLUGIN_ENOMEM;
             set_hidden(app.digits[i].seg[s], true);
         }
-        app.digits[i].shown_mask = 0xFF; /* force first render */
+        app.digits[i].shown_mask = 0; /* every segment starts hidden */
     }
     for (i = 0; i < 2; ++i) {
         app.colon[i] = make_rect(app.panel, 0xFF);
         if (app.colon[i] == 0) return GM_PLUGIN_ENOMEM;
     }
 
-    app.bar_bg = make_rect(app.panel, 0x40);
+    app.bar_bg = make_rect(app.panel, 0x28);
     app.bar_fill = make_rect(app.panel, 0xFF);
     if (app.bar_bg == 0 || app.bar_fill == 0) return GM_PLUGIN_ENOMEM;
 
@@ -755,6 +790,10 @@ static void render_time(uint8_t shade, bool recolor)
     uint8_t masks[DIGIT_SLOTS];
     uint8_t i;
     if (minutes > 999U) minutes = 999U;
+    {
+        uint8_t visible = minutes >= 100U ? 5 : minutes >= 10U ? 4 : 3;
+        if (visible != app.shown_slots) layout_digits(visible);
+    }
     masks[0] = minutes >= 100U ? digit_masks[minutes / 100U] : 0;
     masks[1] = minutes >= 10U ? digit_masks[(minutes / 10U) % 10U] : 0;
     masks[2] = digit_masks[minutes % 10U];
@@ -822,9 +861,8 @@ static void render_prompt(void)
         int16_t w;
         if (next < 0) next = PROGRAM_COUNT - 1;
         if (next >= (int8_t)PROGRAM_COUNT) next = 0;
-        app.libc->snprintf(text, sizeof(text), "SWITCH TO %s?  %s AGAIN",
-                           program_names[next],
-                           app.has_imu ? "HOLD / TURN" : "HOLD");
+        app.libc->snprintf(text, sizeof(text), "%s?  REPEAT TO CONFIRM",
+                           program_names[next]);
         set_text_if_changed(app.prompt_label, app.shown_prompt,
                             sizeof(app.shown_prompt), text);
         w = (int16_t)((int32_t)app.prompt_bar_w *
@@ -884,8 +922,7 @@ static void render(void)
         if (fill < 1) fill = 1;
         if (fill > app.bar_w) fill = app.bar_w;
         if (fill != app.shown_bar) {
-            app.ui->obj_set_size(app.bar_fill, fill,
-                                 (int16_t)(app.panel_h * 45 / 1000 + 1));
+            app.ui->obj_set_size(app.bar_fill, fill, app.bar_h);
             app.shown_bar = fill;
         }
 
@@ -895,6 +932,14 @@ static void render(void)
             app.libc->snprintf(text, sizeof(text), "SESSION %u  -  %s",
                                (unsigned)app.pomodoros,
                                app.state == STATE_PAUSED ? "PAUSED" : "TODAY");
+        else if (app.phase == PHASE_PREPARE && app.program == PROGRAM_HIIT)
+            app.libc->snprintf(text, sizeof(text), "%u x 20s / 10s",
+                               (unsigned)HIIT_ROUNDS);
+        else if (app.phase == PHASE_PREPARE && app.program == PROGRAM_EMOM)
+            app.libc->snprintf(text, sizeof(text), "%u x 1 MIN", (unsigned)EMOM_ROUNDS);
+        else if (app.phase == PHASE_PREPARE && app.program == PROGRAM_AMRAP)
+            app.libc->snprintf(text, sizeof(text), "%u MIN  -  NOD = LAP",
+                               (unsigned)(AMRAP_MS / MIN_MS));
         else if (app.program == PROGRAM_AMRAP)
             app.libc->snprintf(text, sizeof(text), "LAP %u", (unsigned)app.laps);
         else if (app.round_total > 0U)
@@ -1008,11 +1053,25 @@ static bool handle_event(const gm_plugin_event_t *event)
     }
 
     if (event->type == GM_PLUGIN_EVENT_IMU_GESTURE) {
-        if (!event->data.imu_gesture.active) return false;
-        switch (event->data.imu_gesture.gesture) {
+        gm_plugin_imu_gesture_t g = event->data.imu_gesture.gesture;
+        bool known = g == GM_PLUGIN_IMU_GESTURE_NOD ||
+                     g == GM_PLUGIN_IMU_GESTURE_HEAD_LOWER ||
+                     g == GM_PLUGIN_IMU_GESTURE_HEAD_RAISE ||
+                     g == GM_PLUGIN_IMU_GESTURE_LEFT ||
+                     g == GM_PLUGIN_IMU_GESTURE_RIGHT;
+        /* Releases carry no action but are ours; swallow them quietly. */
+        if (!event->data.imu_gesture.active) return known;
+        switch (g) {
         case GM_PLUGIN_IMU_GESTURE_NOD:
+        case GM_PLUGIN_IMU_GESTURE_HEAD_LOWER:
+            /* A nod or a head dip: extend / skip / lap. */
             interacted();
             action_up();
+            return true;
+        case GM_PLUGIN_IMU_GESTURE_HEAD_RAISE:
+            /* Glance up to tuck the timer into the corner (or bring it back). */
+            app.last_interaction = app.now;
+            app.pinned_compact = !app.pinned_compact;
             return true;
         case GM_PLUGIN_IMU_GESTURE_LEFT:
             interacted();

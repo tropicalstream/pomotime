@@ -23,7 +23,8 @@ Glasses alone (primary button + head gestures):
 | **Click** | Start / pause |
 | **Double-click** | Reset the current program |
 | **Hold** | Next program (Pomodoro → HIIT → EMOM → AMRAP) |
-| **Nod** | Pomodoro: extend focus **+10 min** (flow protection) · HIIT/EMOM: skip interval · AMRAP: +1 lap |
+| **Nod** or **head down** | Pomodoro: extend focus **+10 min** (flow protection) · HIIT/EMOM: skip interval · AMRAP: +1 lap |
+| **Head up** | Tuck the timer into the corner chip / bring it back |
 | **Head left / right** | Previous / next program |
 | **Very long hold**, BACK, HOME | Exit |
 
@@ -87,7 +88,18 @@ suspend/resume wall-time credit, and exit.
 
 ## Run in Studio
 
-Open **MemoMind Plugin Studio**, **Import package**, and pick the `.gmp` above
-(or **Import workspace** on the `plugin-open-platform` folder if the plugin is
-copied under `GlassSDK/examples/`). Studio's virtual 600×350 display accepts
-button and IMU-gesture input from its toolbar.
+Desktop Studio only discovers plugins that live as real directories under
+`GlassSDK/examples/` (symlinks are skipped), so:
+
+```sh
+glass/sync-to-sdk.sh
+```
+
+copies the sources there and builds them. Then in **MemoMind Plugin Studio**:
+**Import workspace** → the `plugin-open-platform` folder, and choose
+**X3 Timer** in the glass-plugin dropdown (it sorts near the top). After a
+rebuild, **Refresh repository** reloads it. The virtual 600×350 display takes
+the primary button (click / double / hold 1 s) and head motion from the
+joystick — down = skip/extend, up = tuck, left/right = program.
+
+Verified in Studio 0.1.0: 28–29 FPS, 7.8 KiB ROM, 692 B RAM.
