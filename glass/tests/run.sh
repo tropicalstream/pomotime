@@ -5,6 +5,6 @@ set -e
 cd "$(dirname "$0")"
 SDK=${SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk}
 INC=${GLASS_SDK:-$HOME/Projects/plugin-open-platform/GlassSDK}/include
-OUT=${TMPDIR:-/tmp}/x3timer_host
+OUT=${TMPDIR:-/tmp}/pomotime_host
 cc -isysroot "$SDK" -std=gnu99 -Wall -Wno-unused-function -I "$INC" -o "$OUT" host_test.c
 "$OUT"

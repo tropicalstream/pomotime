@@ -1,6 +1,7 @@
-# X3 Timer for MemoMind glasses
+# PomoTime
 
-A port of [x3timer](../x3timer) (RayNeo X3 Pro) to the MemoMind
+A glanceable timer for MemoMind glasses, ported from the RayNeo X3 Pro app
+[x3timer](../x3timer) to the MemoMind
 [Plugin Open Platform](https://github.com/memomind-open/plugin-open-platform):
 a glanceable dual-mode timer — **Pomodoro** focus mode plus three athletic
 modalities (**HIIT/Tabata · EMOM · AMRAP**) — as a native glasses `.gmp` plugin.
@@ -57,8 +58,8 @@ The glasses expose no audio, no persistent storage and only two Host fonts, so:
 ## Layout
 
 ```
-glass/x3timer/manifest.json   plugin identity
-glass/x3timer/x3timer.c       the whole plugin (engine + LVGL rendering)
+glass/pomotime/manifest.json   plugin identity
+glass/pomotime/pomotime.c       the whole plugin (engine + LVGL rendering)
 glass/tests/host_test.c       host-compiled engine test against a stub Host
 glass/tests/run.sh            builds and runs it
 ```
@@ -71,10 +72,10 @@ bootstrap fails without one):
 
 ```sh
 cd ~/Projects/plugin-open-platform/GlassSDK
-../.venv/bin/python build.py build --project ~/Projects/x3timer-memomind/glass/x3timer
+../.venv/bin/python build.py build --project ~/Projects/pomotime/glass/pomotime
 ```
 
-Output: `glass/x3timer/.build/x3timer/x3timer.gmp` plus the `.review.json` /
+Output: `glass/pomotime/.build/pomotime/pomotime.gmp` plus the `.review.json` /
 `.review-source.enc` sidecars that Studio packages for submission.
 
 ## Test
@@ -99,7 +100,7 @@ glass/sync-to-sdk.sh
 
 copies the sources there and builds them. Then in **MemoMind Plugin Studio**:
 **Import workspace** → the `plugin-open-platform` folder, and choose
-**X3 Timer** in the glass-plugin dropdown (it sorts near the top). After a
+**PomoTime** in the glass-plugin dropdown (it sorts near the top). After a
 rebuild, **Refresh repository** reloads it. The virtual 600×350 display takes
 the primary button (click / double / hold 1 s) and head motion from the
 joystick — left/right browse programs while idle; anything else is ignored.

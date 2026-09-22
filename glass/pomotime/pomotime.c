@@ -1,5 +1,5 @@
 /*
- * X3 Timer — a glanceable dual-mode timer for MemoMind glasses.
+ * PomoTime — a glanceable dual-mode timer for MemoMind glasses.
  *
  * Port of the RayNeo X3 Pro app of the same name. Pomodoro focus mode plus
  * three athletic modalities (HIIT/Tabata, EMOM, AMRAP). The widget occupies

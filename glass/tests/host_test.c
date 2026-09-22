@@ -1,6 +1,6 @@
 #define _FORTIFY_SOURCE 0
 /*
- * Host-side harness: compiles x3timer.c against the real SDK headers with a
+ * Host-side harness: compiles pomotime.c against the real SDK headers with a
  * stub Host + LVGL table, then drives the engine through the plugin callbacks.
  * Build/run: see run.sh. Not part of the .gmp.
  */
@@ -61,7 +61,7 @@ static gm_plugin_host_api_t host;
 static gm_plugin_descriptor_t desc;
 
 /* Pull the plugin in directly so its statics are visible for assertions. */
-#include "../x3timer/x3timer.c"
+#include "../pomotime/pomotime.c"
 
 /* ---- driver helpers ---- */
 static void tick(uint32_t ms) {

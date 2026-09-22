@@ -1,4 +1,4 @@
-# X3 Timer
+# PomoTime
 
 Glanceable dual-mode timer: Pomodoro focus mode plus HIIT/Tabata, EMOM and
 AMRAP athletic programs. Click starts/pauses, double-click resets, hold cycles
