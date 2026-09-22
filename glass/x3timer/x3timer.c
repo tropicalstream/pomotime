@@ -8,14 +8,15 @@
  * of the eye, and a running Pomodoro shrinks to a corner chip after 5 s of no
  * interaction so the view stays clear for reading or coding.
  *
- * Controls (glasses alone):
- *   PRIMARY single      start / pause      PRIMARY double   reset
+ * Controls (glasses alone). The single button does all in-session work;
+ * head motion is deliberately ignored while a session is live so that
+ * looking down at a water bottle can never touch the clock.
+ *   PRIMARY single      start / pause
+ *   PRIMARY double      running: Pomodoro extend +10 min · HIIT/EMOM skip
+ *                       interval · AMRAP +1 lap.  Idle / paused / done: reset
  *   PRIMARY long        next program (guarded while a session is in progress:
  *                       long-press again within 5 s to confirm)
- *   NOD / HEAD DOWN     Pomodoro: extend focus +10 min · HIIT/EMOM: skip
- *                       interval · AMRAP: +1 lap
- *   HEAD UP             tuck the timer into the corner chip / bring it back
- *   HEAD LEFT / RIGHT   previous / next program (same guard)
+ *   HEAD LEFT / RIGHT   previous / next program, only when nothing is running
  *   BACK / HOME         exit
  * Accessory ring, when paired: LEFT/RIGHT program, UP extend/skip/lap,
  *   DOWN pin/unpin the compact chip.
@@ -687,10 +688,10 @@ static gm_plugin_result_t create_ui(void)
     }
     style_text(app.help1, 0x90, false);
     style_text(app.help2, 0x90, false);
-    ui->label_set_text(app.help1, "CLICK start   DOUBLE-CLICK reset   HOLD next mode");
+    ui->label_set_text(app.help1, "CLICK start / pause   2x CLICK reset   HOLD mode");
     ui->label_set_text(app.help2, app.has_imu
-        ? "HEAD: DOWN skip/extend   L-R mode   UP tuck"
-        : "RING: UP extend / skip / lap   LEFT-RIGHT mode   BACK exit");
+        ? "RUNNING: 2x CLICK = lap / skip / extend"
+        : "RUNNING: 2x CLICK = lap / skip / extend");
 
     /* Panel and its children. */
     app.panel = ui->obj_create(app.root);
@@ -938,7 +939,7 @@ static void render(void)
         else if (app.phase == PHASE_PREPARE && app.program == PROGRAM_EMOM)
             app.libc->snprintf(text, sizeof(text), "%u x 1 MIN", (unsigned)EMOM_ROUNDS);
         else if (app.phase == PHASE_PREPARE && app.program == PROGRAM_AMRAP)
-            app.libc->snprintf(text, sizeof(text), "%u MIN  -  NOD = LAP",
+            app.libc->snprintf(text, sizeof(text), "%u MIN  -  2x CLICK = LAP",
                                (unsigned)(AMRAP_MS / MIN_MS));
         else if (app.program == PROGRAM_AMRAP)
             app.libc->snprintf(text, sizeof(text), "LAP %u", (unsigned)app.laps);
@@ -1006,8 +1007,13 @@ static bool handle_event(const gm_plugin_event_t *event)
                 toggle_start_pause();
                 return true;
             case GM_PLUGIN_BUTTON_ACTION_DOUBLE:
+                /* Mid-session the double-click is the lap / skip / extend
+                 * control; with nothing running it resets. A running
+                 * session is reset by pausing first, so a stray double
+                 * click can never wipe a workout. */
                 interacted();
-                load_program();
+                if (app.state == STATE_RUNNING) action_up();
+                else load_program();
                 return true;
             case GM_PLUGIN_BUTTON_ACTION_LONG:
                 interacted();
@@ -1054,35 +1060,24 @@ static bool handle_event(const gm_plugin_event_t *event)
 
     if (event->type == GM_PLUGIN_EVENT_IMU_GESTURE) {
         gm_plugin_imu_gesture_t g = event->data.imu_gesture.gesture;
-        bool known = g == GM_PLUGIN_IMU_GESTURE_NOD ||
-                     g == GM_PLUGIN_IMU_GESTURE_HEAD_LOWER ||
-                     g == GM_PLUGIN_IMU_GESTURE_HEAD_RAISE ||
-                     g == GM_PLUGIN_IMU_GESTURE_LEFT ||
-                     g == GM_PLUGIN_IMU_GESTURE_RIGHT;
-        /* Releases carry no action but are ours; swallow them quietly. */
-        if (!event->data.imu_gesture.active) return known;
+        bool in_session = app.state == STATE_RUNNING || app.state == STATE_PAUSED;
+        /* Head motion is never a control while a session is live: looking
+         * down at a water bottle or nodding along to music must not touch
+         * the clock. Between sessions, turning the head browses programs.
+         * Every gesture is reported as handled so the Host does not log it
+         * as unhandled input. */
+        if (!event->data.imu_gesture.active || in_session) return true;
         switch (g) {
-        case GM_PLUGIN_IMU_GESTURE_NOD:
-        case GM_PLUGIN_IMU_GESTURE_HEAD_LOWER:
-            /* A nod or a head dip: extend / skip / lap. */
-            interacted();
-            action_up();
-            return true;
-        case GM_PLUGIN_IMU_GESTURE_HEAD_RAISE:
-            /* Glance up to tuck the timer into the corner (or bring it back). */
-            app.last_interaction = app.now;
-            app.pinned_compact = !app.pinned_compact;
-            return true;
         case GM_PLUGIN_IMU_GESTURE_LEFT:
             interacted();
-            request_switch(-1);
+            cycle_program(-1);
             return true;
         case GM_PLUGIN_IMU_GESTURE_RIGHT:
             interacted();
-            request_switch(1);
+            cycle_program(1);
             return true;
         default:
-            return false;
+            return true;
         }
     }
     return false;

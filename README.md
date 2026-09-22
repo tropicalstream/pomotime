@@ -16,17 +16,19 @@ Runs entirely on the glasses: no phone plugin, no Bluetooth, 7.6 KiB flash,
 
 ## Controls
 
-Glasses alone (primary button + head gestures):
+Glasses alone. The single button does all in-session work; **head motion is
+ignored while a session is live**, so looking down at a water bottle or nodding
+along to music can never touch the clock.
 
-| Input | Action |
-|---|---|
-| **Click** | Start / pause |
-| **Double-click** | Reset the current program |
-| **Hold** | Next program (Pomodoro → HIIT → EMOM → AMRAP) |
-| **Nod** or **head down** | Pomodoro: extend focus **+10 min** (flow protection) · HIIT/EMOM: skip interval · AMRAP: +1 lap |
-| **Head up** | Tuck the timer into the corner chip / bring it back |
-| **Head left / right** | Previous / next program |
-| **Very long hold**, BACK, HOME | Exit |
+| Input | Idle / finished | Running / paused |
+|---|---|---|
+| **Click** | Start | Pause / resume |
+| **Double-click** | Reset | Running: Pomodoro **extend +10 min** (flow protection) · HIIT/EMOM: skip interval · AMRAP: +1 lap. Paused: reset |
+| **Hold** | Next program (Pomodoro → HIIT → EMOM → AMRAP) | Next program, guarded (see below) |
+| **Head left / right** | Previous / next program | *ignored* |
+| **Very long hold**, BACK, HOME | Exit | Exit |
+
+To reset a running session: pause, then double-click.
 
 With a paired accessory ring: **LEFT / RIGHT** program, **UP** extend/skip/lap,
 **DOWN** pin/unpin the compact corner chip.
@@ -100,6 +102,6 @@ copies the sources there and builds them. Then in **MemoMind Plugin Studio**:
 **X3 Timer** in the glass-plugin dropdown (it sorts near the top). After a
 rebuild, **Refresh repository** reloads it. The virtual 600×350 display takes
 the primary button (click / double / hold 1 s) and head motion from the
-joystick — down = skip/extend, up = tuck, left/right = program.
+joystick — left/right browse programs while idle; anything else is ignored.
 
 Verified in Studio 0.1.0: 28–29 FPS, 7.8 KiB ROM, 692 B RAM.

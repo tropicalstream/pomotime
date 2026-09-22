@@ -119,7 +119,9 @@ int main(void)
     tick(2500);
     CHECK(app.compact_shown, "auto-minimized after 5s idle");
     CHECK(strcmp(overline(), "FOCUS") == 0, "compact overline '%s'", overline());
-    nod();                                   /* extend +10 min, also expands */
+    nod();                                   /* head motion is ignored mid-session */
+    CHECK(app.phase_ms == FOCUS_MS, "nod ignored while running");
+    primary(GM_PLUGIN_BUTTON_ACTION_DOUBLE); /* extend +10 min, also expands */
     CHECK(app.phase_ms == FOCUS_MS + EXTEND_MS, "extended");
     CHECK(!app.compact_shown, "expanded on interaction");
     tick(FOCUS_MS + EXTEND_MS);              /* run through the whole block */
@@ -135,6 +137,10 @@ int main(void)
     primary(GM_PLUGIN_BUTTON_ACTION_SINGLE);
     CHECK(app.state == STATE_PAUSED, "paused");
     { uint32_t before = app.elapsed_ms; tick(2000); CHECK(app.elapsed_ms == before, "no progress while paused"); }
+    { uint16_t pom = app.pomodoros; primary(GM_PLUGIN_BUTTON_ACTION_DOUBLE);
+      CHECK(app.state == STATE_IDLE && app.pomodoros == pom, "double-click while paused resets");
+      primary(GM_PLUGIN_BUTTON_ACTION_SINGLE); tick(1000); primary(GM_PLUGIN_BUTTON_ACTION_SINGLE);
+      CHECK(app.state == STATE_PAUSED, "paused again"); }
     primary(GM_PLUGIN_BUTTON_ACTION_SINGLE);
     CHECK(app.state == STATE_RUNNING, "resumed");
 
@@ -183,7 +189,9 @@ int main(void)
     tick(PREPARE_MS + 10);
     CHECK(app.phase == PHASE_AMRAP && app.count_up, "amrap counting up");
     tick(90000);
-    nod(); nod();
+    nod();
+    CHECK(app.laps == 0, "nod does not count a lap");
+    primary(GM_PLUGIN_BUTTON_ACTION_DOUBLE); primary(GM_PLUGIN_BUTTON_ACTION_DOUBLE);
     CHECK(app.laps == 2 && strcmp(caption(), "LAP 2") == 0, "laps '%s'", caption());
     CHECK(remaining_ms() >= 90000 && remaining_ms() < 91000, "count-up shows elapsed (%u)", remaining_ms());
     /* suspend/resume credits the gap */
@@ -198,6 +206,16 @@ int main(void)
     /* wrap-around and exit */
     trigger(GM_PLUGIN_BUTTON_RIGHT);
     CHECK(app.program == PROGRAM_POMODORO, "wrapped to pomodoro");
+    { gm_plugin_event_t e; memset(&e, 0, sizeof(e)); e.struct_size = sizeof(e); e.type = GM_PLUGIN_EVENT_IMU_GESTURE;
+      e.data.imu_gesture.gesture = GM_PLUGIN_IMU_GESTURE_RIGHT; e.data.imu_gesture.active = true;
+      desc.on_event(desc.context, &e);
+      CHECK(app.program == PROGRAM_HIIT, "head right browses when idle");
+      primary(GM_PLUGIN_BUTTON_ACTION_SINGLE);
+      desc.on_event(desc.context, &e);
+      CHECK(app.program == PROGRAM_HIIT && app.state == STATE_RUNNING, "head right ignored while running");
+      primary(GM_PLUGIN_BUTTON_ACTION_SINGLE); primary(GM_PLUGIN_BUTTON_ACTION_DOUBLE);
+      trigger(GM_PLUGIN_BUTTON_LEFT);
+      CHECK(app.program == PROGRAM_POMODORO, "back to pomodoro"); }
     trigger(GM_PLUGIN_BUTTON_BACK);
     CHECK(exit_called, "exit");
 
