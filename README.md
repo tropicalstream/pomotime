@@ -105,3 +105,7 @@ the primary button (click / double / hold 1 s) and head motion from the
 joystick — left/right browse programs while idle; anything else is ignored.
 
 Verified in Studio 0.1.0: 28–29 FPS, 7.8 KiB ROM, 692 B RAM.
+
+## License
+
+Free software, GNU GPL v3 (see [LICENSE](LICENSE)).
