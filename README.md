@@ -1,10 +1,9 @@
 # PomoTime
 
-A glanceable timer for MemoMind glasses, ported from the RayNeo X3 Pro app
-[x3timer](../x3timer) to the MemoMind
-[Plugin Open Platform](https://github.com/memomind-open/plugin-open-platform):
-a glanceable dual-mode timer — **Pomodoro** focus mode plus three athletic
-modalities (**HIIT/Tabata · EMOM · AMRAP**) — as a native glasses `.gmp` plugin.
+A glanceable dual-mode timer for MemoMind glasses — **Pomodoro** focus mode
+plus three athletic modalities (**HIIT/Tabata · EMOM · AMRAP**) — built as a
+native glasses `.gmp` plugin on the MemoMind
+[Plugin Open Platform](https://github.com/memomind-open/plugin-open-platform).
 
 The widget occupies < 20% of the 600×350 panel; everything else stays black
 (transparent on the waveguide). A thin edge pulse echoes the phase so it reads
@@ -39,21 +38,21 @@ switch first shows *… ? REPEAT TO CONFIRM* with a 5-second draining
 bar. Repeat the gesture within the window to confirm; otherwise it cancels and
 the session keeps running. Idle or finished, switches are immediate.
 
-## What changed from the RayNeo version
+## Design notes for a monochrome HUD
 
-The display is 16-level monochrome, so colour coding became **cadence**: work
+The display is 16-level monochrome, so status is carried by **cadence** instead
+of colour: work
 phases get a brisk edge pulse, rest/break phases a slow breathing pulse, the
 final five seconds of an athletic interval a hard flash, and a paused clock
 blinks its colon. Phase names in the overline carry the rest.
 
 The glasses expose no audio, no persistent storage and only two Host fonts, so:
 
-- Countdown beeps, GO tones and fanfares are gone (visual cues only).
-- Task binding and the 7-day sparkline are gone; today's pomodoro count is
-  kept for the session.
+- All cues are visual — no countdown beeps or fanfares.
+- Today's pomodoro count is kept for the session only.
 - The time readout is seven-segment digits built from LVGL rectangles, so it
   scales with the panel independent of Host font sizes.
-- Particle bursts became a brief white flash of the panel border.
+- Interval and round completions flash the panel border briefly.
 
 ## Layout
 
