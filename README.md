@@ -11,8 +11,6 @@ from the corner of the eye. A running Pomodoro shrinks to a corner chip after
 5 s of no interaction so the view stays clear for reading or coding; any
 interaction or a phase change pops it back.
 
-Runs entirely on the glasses: no phone plugin, no Bluetooth, 7.6 KiB flash,
-680 B static RAM.
 
 ## Controls
 
